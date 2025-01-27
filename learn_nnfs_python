@@ -286,7 +286,7 @@ print(layer3.output)
 """
 
 #==============================================================================
-# ACTIVATION FUNCTION
+# ACTIVATION FUNCTION AND ITS TYPES
 #==============================================================================
 
 """
@@ -397,5 +397,184 @@ active3 = Activation_ReLU()
 active3.forward(layer3.output)
 
 #==============================================================================
+# SOFTMAX ACTIVATION FUNCTION
+#==============================================================================
 
+layer_outputs = [4.8, 1.21, 2.385]
 
+"""
+    Introducing the Exponential function in order to standardize the values from
+    the last layer of neurons into the output later of neurons.
+        1. Helps us build a relation between the various neurons in the output layer
+        2. Is an important change in training neural networks
+        3. Helps us deal with negative values when establishing the relations
+"""
+# we are going to exponentiate the outputs using Euler's number
+
+"""
+E = 2.71828182846 # hard-coding the euler's number
+"""
+
+import math
+E = math.e # importing euler's number using 'math' library
+
+exp_values = [] # exponential values
+
+for output in layer_outputs:
+    exp_values.append(E**output)
+    
+print(exp_values) # output: [121.51041751873483, 3.353484652549023, 10.859062664920513]
+
+"""
+We now normalize the exponentiated values to understand the relation between the
+values by dividing each value by the sum of the values.
+"""
+
+norm_base = sum(exp_values) # normalization base value
+norm_values = []
+
+for value in exp_values:
+    norm_values.append(value/norm_base)
+
+print(norm_values) # output: [0.8952826639572619, 0.024708306782099374, 0.0800090292606387]
+print(sum(norm_values)) # output: 0.9999999999999999
+
+# now converting this code using Numpy and cleaning it ========================
+
+import math
+import numpy as np
+import nnfs
+
+nnfs.init()
+
+layer_outputs = [4.8, 1.21, 2.385]
+
+exp_values = np.exp(layer_outputs)
+print(exp_values) # output: [121.51041752   3.35348465  10.85906266]
+
+norm_values = exp_values/np.sum(exp_values)
+print(norm_values) # output: [0.89528266 0.02470831 0.08000903]
+print(sum(norm_values)) # output: 0.9999999999999999
+
+# This exponentiation and normalization is called SOFTMAX =====================
+
+# using this for a batch of inputs
+
+import math
+import numpy as np
+import nnfs
+
+nnfs.init()
+
+layer_outputs = [[4.8, 1.21, 2.385],
+                 [8.9, -1.81,0.2],
+                 [1.41, 1.051, 0.026]]
+
+exp_values = np.exp(layer_outputs)
+print(exp_values)
+    # output:
+"""
+[[1.21510418e+02 3.35348465e+00 1.08590627e+01]
+ [7.33197354e+03 1.63654137e-01 1.22140276e+00]
+ [4.09595540e+00 2.86051020e+00 1.02634095e+00]]
+"""
+norm_base = np.sum(exp_values, axis=1, keepdims=True)
+    # axis ensures that the np.sum applies to the axis 1, ie each row
+    # keepdims allows function to match dimensions of output with input
+    
+print(norm_base)
+    # output:
+"""
+[[ 135.72296484]
+ [7333.35859605]
+ [   7.98280655]]
+"""
+norm_values = exp_values / norm_base
+print(norm_values)
+    # output:
+"""
+[[8.95282664e-01 2.47083068e-02 8.00090293e-02]
+ [9.99811129e-01 2.23163963e-05 1.66554348e-04]
+ [5.13097164e-01 3.58333899e-01 1.28568936e-01]]
+"""
+print(np.sum(norm_values, axis=1, keepdims=True))
+    # output:
+"""
+[[1.]
+ [1.]
+ [1.]]
+"""
+
+# addressing issues of overflow with exponentiation ===========================
+"""
+We subtract the max value in each batch of values from all the values in the batch
+to reduce the value fed into the exponentiation function and thus the output gets
+restricted between 0 and 1.
+"""
+
+# =============================================================================
+# including subtracting max value and softmax activation class
+# =============================================================================
+
+# importing all the important libraries and functions
+import math
+import numpy as np
+import nnfs
+from nnfs.datasets import spiral_data
+
+# setting the random.seed and data type
+nnfs.init()
+
+# defining the important object classes, attributes, and methods
+class Layer_Dense:
+    def __init__(self, n_inputs, n_neurons):
+        self.weights = 0.10*np.random.randn(n_inputs, n_neurons)
+        self.biases = np.zeros((1, n_neurons))
+    
+    def forward(self, inputs):
+        self.output = np.dot(inputs, self.weights) + self.biases
+
+class Activation_ReLU:
+    def forward(self, inputs):
+        self.output = np.maximum(0, inputs)
+        
+class Activation_Softmax:
+    def forward(self, inputs):
+        exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
+        prob_values = exp_values/np.sum(exp_values, axis=1, keepdims=True)
+        self.output = prob_values
+
+# creating a custom dataset
+X, y = spiral_data(samples=100, classes=3)
+
+# creating the neural network's neurons
+dense1 = Layer_Dense(2, 3)
+activation1 = Activation_ReLU()
+dense2 = Layer_Dense(3, 3)
+activation2 = Activation_Softmax()
+
+# passing data through the neural network
+dense1.forward(X) #got values for layer 1 neurons from input, weight product plus biases
+activation1.forward(dense1.output) #got activation values within range 0 and value for layer 1 neurons
+dense2.forward(activation1.output) #got values for layer 2 neurons from activation inputs, weights product plus neuron biases
+activation2.forward(dense2.output) #got output values as probabilities for output neurons
+
+# looking at the results
+print(activation2.output[:10])
+    # output:
+"""
+[[0.33333334 0.33333334 0.33333334]
+ [0.33331734 0.3333183  0.33336434]
+ [0.3332888  0.33329153 0.33341965]
+ [0.33325943 0.33326396 0.33347666]
+ [0.33323312 0.33323926 0.33352762]
+ [0.33328417 0.33328718 0.33342862]
+ [0.33318216 0.33319145 0.33362636]
+ [0.33318278 0.33319202 0.33362517]
+ [0.33314922 0.33316055 0.3336902 ]
+ [0.3331059  0.33311984 0.3337743 ]]
+"""
+
+# =============================================================================
+# UNDERSTANDING AND CALCULATING LOSS 
+# =============================================================================
