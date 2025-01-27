@@ -1,0 +1,401 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Dec 30 11:31:11 2024
+
+@author: Sachit Deshmukh
+"""
+from IPython import get_ipython
+
+#==============================================================================
+# OPTIMIZING THE INPUT LAYERS
+#==============================================================================
+
+# storing the set of input as list
+
+inputs = [1, 2, 3, 0.5]
+
+# storing the sets of wieghts between neuron connections as list of lists
+
+weights = [[0.1, -0.2, 1.2, -1.5],
+           [-0.5, 1.0, 0.4, 0.5],
+           [2.0, 1.7, 0.6, -1.8]]
+
+# storing the biases of neurons as list
+
+biases = [2, 3, 0.5]
+
+"""
+merge_1 = zip(weights, biases)
+print(list(merge_1))
+
+[([0.1, -0.2, 1.2, -1.5], 2),
+ ([-0.5, 1.0, 0.4, 0.5], 3),
+ ([2.0, -1.7, 0.6, -1.8], 0.5)]
+
+merge_2 = zip(inputs, weights[0])
+print(list(merge_2))
+
+print(weights[0])
+"""
+
+layer_outputs = []
+for neuron_weights, neuron_bias in zip(weights, biases):
+    neuron_output = 0 # created three output variables
+    for n_input, weight in zip(inputs, neuron_weights):
+        neuron_output += n_input*weight # calculated input*weight part of output
+    neuron_output += neuron_bias # added biases to the outputs
+    layer_outputs.append(neuron_output) # storing all outputs as list
+    
+print(layer_outputs) # output: [4.55, 5.95, 6.8]
+
+#==============================================================================
+
+"""
+inputs = [1, 2, 3, 0.5]
+
+weights = [[0.1, -0.2, 1.2, -1.5],
+           [-0.5, 1.0, 0.4, 0.5],
+           [2.0, 1.7, 0.6, -1.8]]
+
+biases = [2, 3, 0.5]
+
+trial_output = 0
+for i in range(len(inputs)):
+    value = inputs[i]*weights[0][i]
+    trial_output += value
+trial_output += biases[0]
+
+print(trial_output)
+
+print(len(weights))
+
+trial_output_2 = []
+for y in range(len(weights)):
+    calc_output = 0
+    for i in range(len(inputs)):
+        calc_value = inputs[i]*weights[y][i]
+        calc_output += calc_value
+    calc_output += biases[y]
+    trial_output_2.append(calc_output)    
+
+print(trial_output_2)
+"""
+#==============================================================================
+# DOT PRODUCTS
+#==============================================================================
+
+# trying out ways of optimizing the calculations
+
+import numpy as np
+
+inputs_t1 = [1, 2, 3, 0.5]
+weights_t1 = [0.1, -0.2, 1.2, -1.5]
+bias_t1 = 2
+
+value_t1 = np.dot(inputs_t1, weights_t1)
+print(value_t1) # output: 2.55
+output_t1 = value_t1 + bias_t1
+print(output_t1) # output: 4.55
+
+# taking all the weights into the calculation
+
+inputs = [1, 2, 3, 0.5]
+
+weights = [[0.1, -0.2, 1.2, -1.5],
+           [-0.5, 1.0, 0.4, 0.5],
+           [2.0, 1.7, 0.6, -1.8]]
+
+biases = [2, 3, 0.5]
+
+layer_outputs_2 = np.dot(weights, inputs) + biases
+print(layer_outputs_2) # output: [4.55, 5.95, 6.8] as expected
+
+layer_outputs_2 = np.dot(inputs, weights) + biases
+print(layer_outputs_2) # ValueError: shapes (4,) and (3,4) not aligned
+
+"""
+This errors shows as the matrix of inputs and weights does not match the shape
+and hence is not able to perform the dot product function.
+
+What we need to do is align the number of columns in the first matrix with the 
+number of rows in the second matrix.
+
+Since inputs is a vector, when added as the second matrix for dot product,
+the function utilized the 4 values of the list as 1 individual column; and we
+obtain another ventor with 3 values due to the 3 rows in the first matrix, weight.
+
+While, we try to add the input at the first matrix, it tries to multiply the
+values from the input list with the first values from the three lists from wieghts;
+and thus it faces the error where it finds a pair of values for the first three
+values from input, but the forth value does not have a pairing value from weights.
+"""
+
+#==============================================================================
+# USING OBJECT ORIENTED PROGRAMMING
+#==============================================================================
+
+"""
+The aim would be to
+    1. take a batch of input, and
+    2. program multiplelayers of neurons
+"""
+
+# 32 batch size is standard
+
+input_set1 = [[1.0, 2.0, 3.0, 0.5],
+              [2.0, 5.0,-1.0, 2.0],
+              [-1.5, 2.7, 3.3, -0.8]] # 3 batches of inputs, each row represents a batch
+
+weight_layer1 = [[0.1, -0.2, 1.2, -1.5],
+                 [-0.5, 1.0, 0.4, 0.5],
+                 [2.0, 1.7, 0.6, -1.8]] # 3 neurons with connections to 4 input neuron
+
+# there is no change here as the shape of this list depends on # of neurons, not batches of inputs
+
+bias_layer1 = [2, 3, 0.5] # biases for 3 neurons
+
+# both bias and weights are specific to the respective neurons.
+
+print(np.shape(input_set1)) # output: (3, 4)
+print(np.shape(weight_layer1)) # output: (3, 4)
+
+output_layer1 = np.dot(input_set1, weight_layer1) + bias_layer1
+    # ValueError: shapes (3,4) and (3,4) not aligned: 4 (dim 1) != 3 (dim 0)
+output_layer1 = np.dot(weight_layer1, input_set1) + bias_layer1
+    # ValueError: shapes (3,4) and (3,4) not aligned: 4 (dim 1) != 3 (dim 0)
+    
+# both options do not work at the rows and columns do not match
+
+output_layer1 = np.dot(input_set1, np.transpose(weight_layer1)) + bias_layer1
+    # option 1; transposed the list of list using transpose function of np
+print(output_layer1)
+
+""" output:
+[[ 4.55  5.95  6.8 ]
+ [-3.    7.6   8.8 ]
+ [ 6.47  7.37  5.51]]
+"""
+
+output_layer1 = np.dot(input_set1, np.array(weight_layer1).T) + bias_layer1
+    # option 2; converted weights to an np array and transposed it
+print(output_layer1)
+
+""" output:
+[[ 4.55  5.95  6.8 ]
+ [-3.    7.6   8.8 ]
+ [ 6.47  7.37  5.51]]
+"""
+
+weight_layer2 = [[0.1, -0.14,0.5],
+                 [-0.5,0.12, -0.33],
+                 [-0.44, 0.73, -0.13]] # 3 neurons with connections to 3 layer1 neurons
+
+bias_layer2 = [-1, 2, -0.5] # biases for 3 neurons
+
+# running the inputs through the 2 layers of neurons
+
+output_layer1 = np.dot(input_set1, np.array(weight_layer1).T) + bias_layer1
+output_layer2 = np.dot(output_layer1, np.array(weight_layer2).T) + bias_layer2
+
+"""
+we transpose as we need to multiply row[0] of output_layer1 with row[0] of
+weight layer 2, and if we did not transpose then we would mutliple row[0] of output
+with column [0] of weights.
+"""
+
+print(output_layer2)
+
+""" output:
+[[ 2.022  -1.805   0.9575]
+ [ 2.036   1.508   5.224 ]
+ [ 1.3702 -2.1689  1.317 ]]
+"""
+
+#==============================================================================
+ipython = get_ipython() # to later clear out the kernel
+if ipython is not None:
+    ipython.magic('reset -f')  # Resets the current namespace
+print("This is a clean console")
+
+# introducing the concept of objects for optimization
+
+import numpy as np
+# import np.random as genran
+np.random.seed(0) # to ensure we obtain the same value(s) every time we run the code
+
+X = [[1.0, 2.0, 3.0, 0.5],
+     [2.0, 5.0,-1.0, 2.0],
+     [-1.5, 2.7, 3.3, -0.8]] # standard variable to denote "input"
+
+"""
+    When you are initiatizing the simulation model, either you can load a
+    pre-defined model that contains the weights and biases.
+
+    OR, you could create a new neural network model.
+    In this case, you will initizialize new weights and biases' values.
+    It is standard to keep the weight values between a small range like
+        0 to 1 OR -1 to 1
+    One could normalize or scale an existing model to get all the weight values
+    between this range.
+    
+    When weights are 0s, it is prefered to keep the biases non-0 value
+"""
+
+class Layer_Dense: # defining the class of a layer of neurons
+    def __init__(self, n_inputs, n_neurons): # will create a layer of neurons
+        self.weights = 0.10*np.random.randn(n_inputs, n_neurons)
+        self.biases = np.zeros((1, n_neurons)) # first param is the shape, hence the tuple "()"
+    
+    # using N of input to define the shape will eliminate the need to use transpose
+    
+    def forward(self, inputs): # method to push the input values from previous layer to next layer
+        self.output = np.dot(inputs, self.weights) + self.biases
+
+"""print(0.10*np.random.randn(4,10))"""
+
+layer1 = Layer_Dense(4,10)
+layer2 = Layer_Dense(10,5) # input has to match previous neurons
+layer3 = Layer_Dense(5,2) # input has to match previous neurons
+
+layer1.forward(X) # putting input batches into layer 1 of neurons
+print(layer1.output)
+
+""" output:
+[[-0.55293562  0.54586413  0.46502292 -0.07326501  0.93905923 -0.45948518
+   0.46906675 -0.05220354  0.49275908  0.2959332 ]
+ [ 0.71112072  0.81743884  0.31226569  0.18707336  0.29888532  0.14808795
+   1.1785395   0.12634378 -0.0948532  -0.5523246 ]
+ [-1.08059852  0.5180714   0.41495629 -0.38973246  0.61656137 -0.25576484
+   0.17756514 -0.19065021  0.63681439  0.21687699]]
+"""
+
+layer2.forward(layer1.output) # putting output of layer 1 neurons to layer 2
+print(layer2.output)
+""" output:
+[[-0.01893487  0.15864686  0.08728175 -0.53031819  0.1553084 ]
+ [-0.17276157 -0.29440293  0.04696612 -0.18272152 -0.07945568]
+ [-0.00150442  0.22335463  0.18672203 -0.53895065  0.19034613]]
+"""
+
+layer3.forward(layer2.output) # putting output of layer 2 neurons to layer 3
+print(layer3.output)
+""" output:
+[[ 0.00859227 -0.06911825]
+ [ 0.00130714 -0.08237892]
+ [ 0.01321654 -0.05377484]]
+"""
+
+#==============================================================================
+# ACTIVATION FUNCTION
+#==============================================================================
+
+"""
+
+0. Intro
+
+    Activation fuction comes after the inputs go through the weights and the
+    biase is added to the output of the neuron.
+    Every neuron in the hidden layers and the output layer will have an
+    activation function.
+    It is like a step function where the calculated output gets put in a
+    function and the function output a new value which is then sent through the
+    network as the new input.
+    
+1. Types
+    1.1 Step Function - the activation function always outputs a 0 or 1 value.
+    1.2 Sigmoid - more granular output than the step function: range 0 to 1.
+    1.3 Rectifiec Linear Unit [ReLU] - closer to step, all values < 0 = 0,
+        all values > 0 = value
+    
+    There is something called as optimizers.
+    
+    How do neural networks reach to the conclusions.
+"""
+
+# A version of the ReLU function:
+
+relu_input = [1, 4, 3, -1, 0, 9, -4, -2, -5]
+relu_output_trial1 = []
+
+def relu_basic(input):
+    output = []
+    for i in input:
+        if i > 0:
+            output.append(i)
+        elif i <= 0:
+            output.append(0)
+    return output
+
+relu_basic(relu_input) # output: [1, 4, 3, 0, 0, 9, 0, 0, 0]
+
+def relu_easy(input):
+    output = []
+    for i in input:
+        output.append(max(0, i))
+    return output
+
+relu_easy(relu_input) # output: [1, 4, 3, 0, 0, 9, 0, 0, 0]
+
+#==============================================================================
+
+# pip install nnfs - installed the library package "Neural Networks from Scratch
+
+import numpy as np
+import nnfs
+
+nnfs.init() # defined data type as float, and set randon_seed to 0
+
+from nnfs.datasets import spiral_data
+
+# spiral data function explanation below:
+"""
+def spiral_data(points, classes):
+    X = np.zeros((points*classes, 2))
+    y = np.zeros(points*classes, dtype='uint8')
+    for class_number in range(classes):
+        ix = range(points*class_number, points*(class_number+1))
+        r = np.linspace(0.0, 1, points)  # radius
+        t = np.linspace(class_number*4, (class_number+1)*4, points) + np.random.randn(points)*0.2
+        X[ix] = np.c_[r*np.sin(t*2.5), r*np.cos(t*2.5)]
+        y[ix] = class_number
+    return X, y
+"""
+# takes in number of data points per class, number of classes, and outputs np array
+
+X, y = spiral_data(100, 3) # no. of features or data points per row = 2
+
+class Layer_Dense:
+    def __init__(self, n_inputs, n_neurons):
+        self.weights = 0.10*np.random.randn(n_inputs, n_neurons)
+        self.biases = np.zeros((1, n_neurons))
+    
+    def forward(self, inputs):
+        self.output = np.dot(inputs, self.weights) + self.biases
+
+class Activation_ReLU:
+    def forward(self, inputs):
+        self.output = np.maximum(0, inputs)
+
+layer1= Layer_Dense(2, 16)
+active1 = Activation_ReLU()
+
+layer1.forward(X)
+print(layer1.output)
+active1.forward(layer1.output)
+print(active1.output)
+
+""" exploring this aspect of activation """
+
+layer2 = Layer_Dense(16, 8)
+layer2.forward(active1.output)
+active2 = Activation_ReLU()
+active2.forward(layer2.output)
+
+layer3 = Layer_Dense(8, 2)
+layer3.forward(active2.output)
+active3 = Activation_ReLU()
+active3.forward(layer3.output)
+
+#==============================================================================
+
+
