@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jan 27-01-2025 19:54
+Created on Thu Jan 30 21:14:21 2025
+
 @author: Sachit Deshmukh
-Purpoe: Document the cleaned code for simulating Neural Networks in Python
 """
 
 # importing all the important libraries and functions
@@ -33,6 +33,25 @@ class Activation_Softmax:
         prob_values = exp_values/np.sum(exp_values, axis=1, keepdims=True)
         self.output = prob_values
 
+class Loss:
+    def calculate(self, output, y):
+        sample_losses = self.forward(output, y) 
+        data_loss = np.mean(sample_losses)
+        return data_loss
+
+class Loss_CategoricalCrossentropy(Loss):
+    def forward(self, y_pred, y_true):
+        samples = len(y_pred)
+        y_pred_clipped = np.clip(y_pred, 1e-7, 1-1e-7)
+        
+        if len(y_true.shape) == 1: 
+            correct_confidence = y_pred_clipped[range(samples), y_true]
+        elif len(y_true.shape) == 2: 
+            correct_confidence = np.sum(y_pred_clipped*y_true, axis=1)
+        
+        negative_log_likelihoods = -np.log(correct_confidence)
+        return negative_log_likelihoods
+
 # creating a custom dataset
 X, y = spiral_data(samples=100, classes=3)
 
@@ -47,3 +66,6 @@ dense1.forward(X) #got values for layer 1 neurons from input, weight product plu
 activation1.forward(dense1.output) #got activation values within range 0 and value for layer 1 neurons
 dense2.forward(activation1.output) #got values for layer 2 neurons from activation inputs, weights product plus neuron biases
 activation2.forward(dense2.output) #got output values as probabilities for output neurons
+
+loss_function = Loss_CategoricalCrossentropy()
+loss = loss_function.calculate(activation2.output, y) # obtained the mean loss value for the predictions
