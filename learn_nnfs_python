@@ -578,3 +578,266 @@ print(activation2.output[:10])
 # =============================================================================
 # UNDERSTANDING AND CALCULATING LOSS 
 # =============================================================================
+
+""" Categorical Cross Entropy
+Taking the negative sum of the target value mutliplied by the log of the predicted value
+for each of the values
+
+Key concepts
+1. Logarithms
+2. One-hot Coding
+"""
+
+# understanding logarithm
+"""
+ln(b) = x is solving for the value of x, where
+e**x = b
+
+simply put, when a**x = c, log of base a for value b is equal to the power of x
+there are conventions:
+    1. log(b) means 10**x = b
+    2. ln(b) means e**x = b
+"""
+
+import numpy as np
+import math
+
+b = 5.2
+
+print(np.log(b)) # output: 1.6486586255873816
+print(math.e**np.log(b)) # output: 5.199999999999999
+
+"""
+Classes: 3
+Label: 0 # the correct classification
+One-Hotcoding: [1, 0, 0] # the [i]th index in one-hot is 1 when i = label
+Prediction: [0.7, 0.1, 0.2]
+
+Loss = L = -(1*log(0.7) + 0*log(0.1) + 0*log(0.2))
+which simplifies to:
+    L = -(1*log(0.7))
+which reads as the negative product of log of predicted value for target class.
+"""
+
+# calculating loss with an example
+
+import math
+
+softmax_output = [0.7, 0.1, 0.2]
+# target_class = 0
+one_hot_coding = target_output = [1, 0, 0]
+
+loss = -(math.log(softmax_output[0])*target_output[0] +
+         math.log(softmax_output[1])*target_output[1] +
+         math.log(softmax_output[2])*target_output[2])
+
+print(loss) # output: 0.35667494393873245
+
+loss_2 = -(math.log(softmax_output[0]))
+print(loss_2) # output: 0.35667494393873245
+
+""" The values are the same here"""
+
+loss_3 = -math.log(0.75)
+loss_4 = -math.log(0.25)
+
+print(loss_3) # output: 0.2876820724517809
+print(loss_4) # output: 1.3862943611198906
+
+"""
+Here, when the softmax output, ie, the prediction is higher, the loss value
+is less; while the loss is much higher for a lower prediction value.
+
+This can help us understand whether the predicted value for the target class is
+an accurate prediction of the target class. As the loss reduced, the accurary 
+increases.
+"""
+
+# APPLYING LOSS TO A BATCH ====================================================
+
+softmax_output = [[0.7, 0.1, 0.2],
+                  [0.1, 0.5, 0.4],
+                  [0.02, 0.9, 0.08]]
+
+class_targets = [0, 1, 1] # sparse coding
+    # each value represents a class: {0:dog, 1:cat, 2:human}
+
+"""
+desired values are:
+    softmax_output[0][0], softmax_output[1][1], and softmax_output[2][1]
+We can acheive this using various methods.
+"""
+
+# method 1 - zipping
+
+for targ_idx, outputs in zip(class_targets, softmax_output):
+    print(outputs[targ_idx])
+    # output
+"""
+0.7
+0.5
+0.9
+"""    
+
+# method 2 - Numpy array
+
+import numpy as np
+
+softmax_output = np.array([[0.7, 0.1, 0.2],
+                          [0.1, 0.5, 0.4],
+                          [0.02, 0.9, 0.08]])
+
+class_targets = [0, 1, 1] # will be used as indices
+
+target_values = softmax_output[[0,1,2], class_targets]
+
+print(target_values) # output: [0.7 0.5 0.9]
+
+"""
+the values "[0,1,2]" refer to each individial row in the numpy
+array that we want to input into the function. Instead of writing each row's 
+index every time, as we might have as many as 100 batches, we can just take
+the length of the array, and then input that into the range function, that will
+output all the raw values as indices for us.
+
+thus we replace with:
+    range(len(softmax_output))
+"""
+
+print(softmax_output[range(len(softmax_output)), class_targets])
+    # output: [0.7 0.5 0.9]
+    
+"""
+And then to calculate the loss, we just add the negative and log function to this
+to obtain the loss function for the predicted value per batch of the target value.
+"""
+
+print(-np.log(softmax_output[
+    range(len(softmax_output)), class_targets]))
+        # output: [0.35667494 0.69314718 0.10536052]
+"""
+What I understand is that the second batch that predicted the category for cat
+is the most inaccurate, and conversely the third batch accurately classified the
+inputs as a cat.
+"""
+
+# loss for the batch
+
+neg_log = -np.log(softmax_output[range(len(softmax_output)), class_targets])
+avg_loss = np.mean(neg_log)
+
+print(avg_loss) # output: 0.38506088005216804
+
+"""
+The problem comes when we input the value zero into the log function, as the
+-log of zero is infinite.
+
+We could solve this by clipping the values by an insignificant amount.
+"""
+
+# understanding clipping
+
+import numpy as np
+
+print(np.log(1e-7)) # output: -16.11809565095832
+print(np.log(1-1e-7)) # output: -1.0000000494736474e-07
+
+# we then clip all the predicted values
+    # y_pred_clipped = np.clip(y_pred, 1e-7, 1-1e-7)
+
+# APPLIYING LOSS TO THE MODEL =================================================
+
+import math
+import numpy as np
+import nnfs
+from nnfs.datasets import spiral_data
+
+nnfs.init()
+
+class Layer_Dense:
+    def __init__(self, n_inputs, n_neurons):
+        self.weights = 0.10*np.random.randn(n_inputs, n_neurons)
+        self.biases = np.zeros((1, n_neurons))
+    
+    def forward(self, inputs):
+        self.output = np.dot(inputs, self.weights) + self.biases
+
+class Activation_ReLU:
+    def forward(self, inputs):
+        self.output = np.maximum(0, inputs)
+        
+class Activation_Softmax:
+    def forward(self, inputs):
+        exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
+        prob_values = exp_values/np.sum(exp_values, axis=1, keepdims=True)
+        self.output = prob_values
+        
+class Loss: # defining a parent class here
+    def calculate(self, output, y):
+        sample_losses = self.forward(output, y) # this forward function will depend on the kind of loss function.
+        data_loss = np.mean(sample_losses)
+        return data_loss
+
+class Loss_CategoricalCrossentropy(Loss):
+    def forward(self, y_pred, y_true):
+        samples = len(y_pred)
+        y_pred_clipped = np.clip(y_pred, 1e-7, 1-1e-7)
+        
+        if len(y_true.shape) == 1: # scalar values have been passed for the target classes
+            correct_confidence = y_pred_clipped[range(samples), y_true] # same as softmax_output[range(len(softmax_output)), class_targets]
+        elif len(y_true.shape) == 2: # one-hot encoded vectors passed
+            correct_confidence = np.sum(y_pred_clipped*y_true, axis=1)
+        
+        negative_log_likelihoods = -np.log(correct_confidence)
+        return negative_log_likelihoods
+
+# here, output = y_pred, y = y_true, negative_log_likelihoods = sample_losses
+
+X, y = spiral_data(samples=100, classes=3)
+
+dense1 = Layer_Dense(2, 3)
+activation1 = Activation_ReLU()
+dense2 = Layer_Dense(3, 3)
+activation2 = Activation_Softmax()
+
+dense1.forward(X) 
+activation1.forward(dense1.output)
+dense2.forward(activation1.output)
+activation2.forward(dense2.output)
+
+print(activation2.output[:10])
+
+loss_function = Loss_CategoricalCrossentropy()
+loss = loss_function.calculate(activation2.output, y) # obtained the mean loss value for the predictions
+
+print("Loss:", loss) # output: Loss: 1.098445
+
+# CHECKING FOR ACCURACY =======================================================
+
+"""
+From the softmax outputs and the class targets, we can also determine how accurate
+the predictions were. The principle is that the value at the index of the target
+class each batch should be the highest value. If that is the case, then the 
+model is accurate. Across batches, the average of the "and" statement for the 
+target class and the index of the max value willprovide us with the accuracy.
+"""
+
+import numpy as np
+
+softmax_output = np.array([[0.7, 0.1, 0.2],
+                          [0.5, 0.4, 0.1],
+                          [0.02, 0.9, 0.08]])
+
+class_targets = [0, 1, 2]
+
+predictions = np.argmax(softmax_output, axis=1)
+print(predictions == class_targets) # output: [ True  True  True]
+
+accuracy = np.mean(predictions == class_targets)
+print(accuracy) # output: 0.3333333333333333
+
+"""
+While training a neural network, however, the loss metric is more important.
+
+This loss can be reduced by modifying the weights and biases.
+"""
